@@ -6,85 +6,137 @@
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
     <script src="https://unpkg.com/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
-    
-    <!-- Script de controle ANTES da cena -->
+    <script src="https://unpkg.com/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+
     <script>
-        // Componente para objetos que podem ser pegos
-        AFRAME.registerComponent('grabbable', {
-            init: function() {
-                this.el.addEventListener('click', (evt) => {
-                    console.log('Clicou no objeto:', this.el.id); // Debug
-                    
-                    if (this.el.id === 'colher' && !window.hasSpoon) {
-                        window.hasSpoon = true;
-                        document.querySelector('#instructions').setAttribute('value', 'Agora pegue o ovo!');
-                        document.querySelector('#ovo').setAttribute('visible', 'true');
-                        
-                        // Remove física e animação
-                        this.el.removeAttribute('dynamic-body');
-                        this.el.removeAttribute('animation');
-                        
-                        // Anexa à mão do jogador
-                        this.el.setAttribute('position', '0 0 0');
-                        document.querySelector('#hand').appendChild(this.el);
-                        
-                        console.log('Colher pega!'); // Debug
-                    } 
-                    else if (this.el.id === 'ovo' && window.hasSpoon && !window.hasEgg) {
-                        window.hasEgg = true;
-                        document.querySelector('#instructions').setAttribute('value', 'Agora corra! Clique para começar.');
-                        
-                        // Remove física
-                        this.el.removeAttribute('dynamic-body');
-                        
-                        // Anexa à mão do jogador (sobre a colher)
-                        this.el.setAttribute('position', '0 0.05 0');
-                        document.querySelector('#hand').appendChild(this.el);
-                        
-                        console.log('Ovo pego!'); // Debug
-                    }
-                    else if (window.hasSpoon && window.hasEgg && !window.isRunning) {
-                        startRunning();
-                    }
+        let startTime = null;
+        let timerInterval = null;
+        let isRunning = false;
+        let finished = false;
+        let movingForward = false;
+
+        // Atualiza cronômetro
+        function updateTimer() {
+            if (!isRunning) return;
+            const now = Date.now();
+            const elapsed = ((now - startTime) / 1000).toFixed(2);
+            document.querySelector('#timer').setAttribute('value', `${elapsed}s`);
+        }
+
+        // Inicia cronômetro
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 100);
+                document.querySelector('#instructions').setAttribute('value', 'Correndo...');
+            }
+        }
+
+        // Para cronômetro
+        function stopTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+            }
+        }
+
+        // Movimento controlado por clique
+        AFRAME.registerComponent('click-to-move', {
+            init: function () {
+                window.addEventListener('mousedown', () => {
+                    movingForward = true;
+                    startTimer();
                 });
+                window.addEventListener('mouseup', () => {
+                    movingForward = false;
+                });
+            },
+            tick: function (time, delta) {
+                if (movingForward && !finished) {
+                    const player = document.querySelector('#player');
+                    player.object3D.translateZ(-0.005 * delta); // velocidade
+                }
             }
         });
 
+    </script>
+
+    <script>
+        AFRAME.registerComponent('start-button', {
+            init: function () {
+                this.el.addEventListener('click', () => {
+                    console.log('Jogo iniciado!');
+                    this.el.setAttribute('visible', 'false');
+                    window.gameStarted = true;
+
+                    // resetar o timer visual
+                    const timerText = document.querySelector('#timer');
+                    timerText.setAttribute('value', '0.00s');
+
+                    // iniciar o cronômetro aqui
+                    startTimer();
+                });
+            }
+        });
+    </script>
+
+    <script>
+
         // Variáveis de estado globais
+        window.gameStarted = false;
         window.hasSpoon = false;
         window.hasEgg = false;
         window.isRunning = false;
+        window.gameTimer = null;
+        window.finished = false;
 
-        // Função para começar a correr
+        // função para começar a correr
         function startRunning() {
             window.isRunning = true;
             document.querySelector('#instructions').setAttribute('value', 'Correndo...');
             
-            // Move a colher com o ovo para a "boca"
+            // move a colher com o ovo
             const spoon = document.querySelector('#colher');
             const egg = document.querySelector('#ovo');
             
             document.querySelector('#mouth').appendChild(spoon);
             document.querySelector('#mouth').appendChild(egg);
             
-            // Ajusta posições
+            // ajusta posições
             spoon.setAttribute('position', '0 0 -0.3');
             spoon.setAttribute('rotation', '0 0 10');
             egg.setAttribute('position', '0 0.1 -0.2');
             
-            // Adiciona animação de corrida
+            // adiciona animação de corrida
             document.querySelector('#camera').setAttribute('animation', {
                 property: 'position',
                 to: '0 1.6 -20',
                 dur: 10000,
                 easing: 'linear'
             });
-            
-            console.log('Começou a correr!'); // Debug
+
         }
     </script>
 
-
+    <script>
+        //aplica a textura nos objetos 3D (colher e ovo)
+        AFRAME.registerComponent('apply-texture', {
+        schema: { src: {type: 'map'} },
+        init: function () {
+            this.el.addEventListener('model-loaded', e => {
+            const mesh = this.el.getObject3D('mesh');
+            if (!mesh) return;
+            mesh.traverse(node => {
+                if (node.isMesh) {
+                node.material.map = new THREE.TextureLoader().load(this.data.src);
+                node.material.needsUpdate = true;
+                }
+            });
+            });
+        }
+        });
+    </script>
 
     <script>
         AFRAME.registerComponent('check-finish', {
@@ -95,13 +147,14 @@
                 const pPos = player.object3D.position;
                 const fPos = finish.object3D.position;
                 
-                // Distância até a linha de chegada
+                // distância até a linha de chegada
                 const dist = pPos.distanceTo(fPos);
                 
                 if (dist < 2 && !window.finished) {
                     window.finished = true;
                     
                     const msg = document.querySelector('#victory-message');
+                    stopTimer()
                     msg.setAttribute('visible', 'true');
                 }
             }
@@ -175,10 +228,22 @@
 </head>
 <body>
     <a-scene physics="debug: true" cursor="rayOrigin: mouse">
+
+        <a-entity id="start-game-button" start-button position="0 1.6 -1" visible="true">
+            <a-plane width="1.5" height="0.7" color="#3399ff" opacity="0.8" radius="0.2" class="clickable"></a-plane>
+            <a-text value="COMECAR JOGO" align="center" color="#fff" position="0 0 0.01" width="3"></a-text>
+        </a-entity>
+
         <!-- Assets -->
         <a-assets>
             <a-asset-item id="colher-obj" src="./Assets/objetos/colher.glb"></a-asset-item>
             <a-asset-item id="ovo-obj" src="./Assets/objetos/ovo.glb"></a-asset-item>
+            <a-asset-item id="pessoa-1" src="Assets/personagens/raiva.glb"></a-asset-item>
+            <a-asset-item id="pessoa-2" src="Assets/personagens/pessoa-dancando.glb"></a-asset-item>
+            <a-asset-item id="pessoa-3" src="Assets/personagens/hip-hop.glb"></a-asset-item>
+            <a-asset-item id="pessoa-4" src="Assets/personagens/feliz.glb"></a-asset-item>
+            <a-asset-item id="colher-textura" src="Assets//textura/colher-textura.png"></a-asset-item>
+            <a-asset-item id="ovo-textura" src="Assets/textura/ovo-amarelo.png"></a-asset-item>
         </a-assets>
 
         <!-- Ambiente -->
@@ -217,34 +282,37 @@
         </a-box>
 
         <!-- Contêiner que o jogador controla -->
-        <a-entity id="player" position="0 1.6 0" wasd-controls look-controls>
-            <!-- Mão do jogador -->
+        <a-entity id="player" position="0 1.6 0" wasd-controls look-controls check-finish>
             <a-entity id="hand" position="0.2 -0.3 -0.5">
-                <!-- Colher (inicialmente solta) -->
+                <!-- Colher -->
                 <a-entity id="colher" 
                         gltf-model="#colher-obj"
                         position="-0.2 0 0"
                         scale="3 3 3"
                         grabbable
-                        dynamic-body="mass: 0.5">
+                        dynamic-body="mass: 0.5"
+                        apply-texture="src: ./Assets/textura/colher-textura.png">
                     <a-animation attribute="rotation"
                                 dur="2000"
                                 to="0 360 0"
                                 repeat="indefinite"></a-animation>
                 </a-entity>
             </a-entity>
-            <!-- Ovo (fica na colher depois de pegar) -->
+            <!-- Ovo -->
             <a-entity id="ovo" 
                     gltf-model="#ovo-obj"
                     position="0 -0.15 -0.4"
                     scale="4 4 4"
                     grabbable
                     dynamic-body="mass: 0.3"
-                    visible="true">
+                    visible="true"
+                    apply-texture="src: ./Assets/textura/ovo-amarelo.png">
             </a-entity>
             <a-camera>
                 <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
             </a-camera>
+
+            <a-text id="timer" value="0.00s" position="1.5 0.7 -1" align="right" color="black" width="3"></a-text>
         </a-entity>
 
         <!-- Ativa detecção de chegada com confetes -->
@@ -257,15 +325,6 @@
             <a-box position="2 -1 0" width="0.1" height="6" depth="0.1" color="#ff0000"></a-box>
         </a-entity>
 
-        <!-- Texto -->
-        <a-entity id="ui" position="0 0 -0.5">
-            <a-text id="instructions" value="Pegue a Colher Primeiro!" 
-                   align="center" width="5" position="0 3.5 -4" color="black"></a-text>
-        </a-entity>
-
-        <!-- Mão do jogador -->
-        <a-entity id="hand" position="0.2 -0.3 -0.5"></a-entity>
-
         <!-- Câmera -->
         <a-camera id="camera">
             <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
@@ -273,42 +332,96 @@
 
        <!-- Container de confetes -->
         <a-entity id="confetti-container" visible="false" position="0 4 -22">
-        <!-- Gerar vários confetes coloridos -->
-        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
-        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+            <!-- Gerar vários confetes coloridos -->
+            <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+            <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
         </a-entity>
+
         <!-- Texto de vitória (HUD) com fundo -->
         <a-entity id="victory-panel" position="0 3.5 -26" visible="false">
-        <!-- Fundo do painel -->
-        <a-plane width="4" height="1" color="#222" opacity="0.8" material="side: double" position="0 0 0"></a-plane>
-        
-        <!-- Borda decorativa -->
-        <a-plane width="4.1" height="1.1" color="#FFD700" opacity="0.9" position="0 0 -0.01"></a-plane>
-        
-        <!-- Texto -->
-        <a-text id="victory-message" 
-                value="PARABENS! VOCE VENCEU!"
-                align="center" 
-                width="5" 
-                color="#FFD700" 
-                position="0 0 0.01"
-                font="mozillavr">
-        </a-text>
+            <!-- Fundo do painel -->
+            <a-plane width="4" height="1" color="#222" opacity="0.8" material="side: double" position="0 0 0"></a-plane>
+            
+            <!-- Borda decorativa -->
+            <a-plane width="4.1" height="1.1" color="#FFD700" opacity="0.9" position="0 0 -0.01"></a-plane>
+            
+            <!-- Texto -->
+            <a-text id="victory-message" 
+                    value="PARABENS! VOCE VENCEU!"
+                    align="center" 
+                    width="5" 
+                    color="#FFD700" 
+                    position="0 0 0.01"
+                    font="mozillavr">
+            </a-text>
         </a-entity>
-  </a-entity>
+
+        <!-- PESSOAS -->
+        <!-- esquerda -->
+         <a-entity gltf-model="#pessoa-2" position="-3 0 -6" rotation="0 90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-3" position="-3 0 -7" rotation="0 90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-3" position="-3 0 -14" rotation="0 90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-2" position="-3 0 -2.5" rotation="0 90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-1" position="-3 0 -9.5" rotation="0 90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-4" position="-3.5 0 -4" rotation="0 90 0" animation-mixer> </a-entity>
+
+         <!-- direita -->
+         <a-entity gltf-model="#pessoa-4" position="3 0 -4" rotation="0 -90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-3" position="3 0 -9" rotation="0 -90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-1" position="3 0 -12" rotation="0 -90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-2" position="3 0 -17" rotation="0 -90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-3" position="3 0 -2" rotation="0 -90 0" animation-mixer> </a-entity>
+         <a-entity gltf-model="#pessoa-2" position="3 0 -5" rotation="0 -90 0" animation-mixer> </a-entity>
+
+
+        <!-- Decorações -->
+        <!-- cubos -->
+        <a-box position="-5 0.5 -3" rotation="0 30 0" width="1" height="1" depth="1" color="#4CC3D9"></a-box>
+        <a-box position="6 0.5 -4" rotation="0 60 0" width="1.5" height="1.5" depth="1.5" color="#EF2D5E"></a-box>
+        <a-box position="-4 1.5 -6" rotation="15 0 30" width="1" height="1" depth="1" color="#FFC65D"></a-box>
+
+        <!-- esferas -->
+        <a-sphere position="3 0.8 -7" radius="0.8" color="red"></a-sphere>
+        <a-sphere position="-2 1.2 -10" radius="0.5" color="#FF9D5C"></a-sphere>
+        <a-sphere position="5 0.8 -12" radius="1" color="#A569BD"></a-sphere>
+
+        <!-- cilindros -->
+        <a-cylinder position="2.4 0.5 -15" radius="0.5" height="1.5" color="#1ABC9C"></a-cylinder>
+        <a-cylinder position="-3 0.5 -12" radius="0.8" height="1" color="#E74C3C" rotation="0 45 0"></a-cylinder>
+
+        <!-- cones -->
+        <a-cone position="-2.6 0.5 -1" radius-bottom="0.7" radius-top="0" height="1.5" color="#3498DB"></a-cone>
+        <a-cone position="4 0.5 -20" radius-bottom="0.5" radius-top="0" height="2" color="#F1C40F" rotation="0 0 45"></a-cone>
+
+        <!-- torus -->
+        <a-torus position="-2 5 -25" arc="360" radius="0.5" radius-tubular="0.1" color="#9B59B6"></a-torus>
+        <a-torus position="0 0 -25" arc="180" radius="7" radius-tubular="0.1" color="#882925"></a-torus>
+        <a-torus position="0 0 -15" arc="180" radius="7" radius-tubular="0.1" color="#f1ae2b"></a-torus>
+        <a-torus position="0 0 -5" arc="180" radius="7" radius-tubular="0.1" color="#26ade4"></a-torus>
+        <a-torus position="0 0 0" arc="180" radius="7" radius-tubular="0.1" color="#da2c7a"></a-torus>
+        <a-torus position="3 1 1" arc="270" radius="0.7" radius-tubular="0.15" color="#E67E22" rotation="0 45 0"></a-torus>
+
+        <!-- pirâmides -->
+        <a-cone position="-5 0.5 -15" radius-bottom="1" radius-top="0" height="2" color="#37192c" rotation="0 0 0"></a-cone>
+        <a-cone position="6 0.5 -18" radius-bottom="0.8" radius-top="0" height="1.8" color="#E74C3C" rotation="0 30 0"></a-cone>
+
+        <!-- outros -->
+        <a-box position="1 0.5 -25" width="2" height="0.3" depth="0.3" color="#16A085" rotation="0 20 0"></a-box>
+        <a-cylinder position="-4 0.5 -22" radius="0.2" height="2" color="#D35400" rotation="30 0 0"></a-cylinder>
+
     </a-scene>
 </body>
 </html>

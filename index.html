@@ -97,9 +97,11 @@
         <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
 
         <!-- Objetos interativos -->
+
+        <!-- Colher -->
         <a-entity id="colher" 
                  gltf-model="#colher-obj"
-                 position="-1 1.6 -3"
+                 position="0 1.4 -0.4"
                  scale="3 3 3"
                  grabbable
                  dynamic-body="mass: 0.5">
@@ -108,7 +110,8 @@
                         to="0 360 0"
                         repeat="indefinite"></a-animation>
         </a-entity>
-
+        
+        <!-- Ovo -->
         <a-entity id="ovo" 
                  gltf-model="#ovo-obj"
                  position="1 1.6 -3"
@@ -118,10 +121,47 @@
                  visible="false">
         </a-entity>
 
-        <!-- Interface -->
+        <!-- Estrada -->
+        <a-box id="road"
+            position="0 0.01 -10"
+            width="4"
+            height="0.05"
+            depth="20"
+            color="#555555"
+            static-body>
+        </a-box>
+
+        <!-- Faixa central da estrada -->
+        <a-box id="road-line"
+            position="0 0.02 -10"
+            width="0.1"
+            height="0.051"
+            depth="20"
+            color="#ffffff"
+            static-body>
+        </a-box>
+
+        <!-- Linha de chegada -->
+        <a-box id="finish-line"
+            position="0 0.03 -20"
+            width="4"
+            height="0.051"
+            depth="0.5"
+            color="white"
+            static-body>
+        </a-box>
+
+        <!-- Arco de chegada -->
+        <a-entity id="finish-arch" position="0 2 -20">
+            <a-box position="0 2 0" width="4" height="0.1" depth="0.1" color="black"></a-box>
+            <a-box position="-2 -1 0" width="0.1" height="6" depth="0.1" color="#ff0000"></a-box>
+            <a-box position="2 -1 0" width="0.1" height="6" depth="0.1" color="#ff0000"></a-box>
+        </a-entity>
+
+        <!-- Texto -->
         <a-entity id="ui" position="0 0 -0.5">
-            <a-text id="instructions" value="Pegue a colher primeiro!" 
-                   align="center" width="5" position="0 0.3 0" color="white"></a-text>
+            <a-text id="instructions" value="Pegue a Colher Primeiro!" 
+                   align="center" width="5" position="0 3.5 -4" color="black"></a-text>
         </a-entity>
 
         <!-- Mão do jogador -->

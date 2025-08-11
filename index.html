@@ -108,6 +108,70 @@
         });
     </script>
 
+<script>
+    AFRAME.registerComponent('win-condition', {
+      schema: {
+        finish: { type: 'selector' },
+        message: { type: 'selector' },
+        confetti: { type: 'selector' }
+      },
+    
+      tick: function () {
+        if (this.hasWon) return;
+    
+        const player = document.querySelector('#player');
+        const finish = this.data.finish;
+    
+        if (!player || !finish) return;
+    
+        const pPos = player.object3D.position;
+        const fPos = finish.object3D.position;
+    
+        const dist = pPos.distanceTo(fPos);
+    
+        if (dist < 2) {
+          this.hasWon = true;
+    
+          if (this.data.message) {
+            document.querySelector('#victory-panel').setAttribute('visible', true);
+          }
+    
+          if (this.data.confetti) {
+            this.data.confetti.setAttribute('visible', true);
+            this.startConfettiAnimation(this.data.confetti);
+          }
+        }
+      },
+    
+      startConfettiAnimation: function (container) {
+        const confettis = container.querySelectorAll('.confetti');
+
+        confettis.forEach(confetti => {
+            const randomX = (Math.random() - 0.5) * 4;
+            const randomZ = (Math.random() - 0.5) * 4;
+            const startY = 0;
+            const endY = -3; // cair para baixo
+            const duration = Math.random() * 1000 + 2000;
+
+            confetti.setAttribute('animation__pos', {
+            property: 'position',
+            from: `${randomX} ${startY} ${randomZ}`,
+            to: `${randomX} ${endY} ${randomZ}`,
+            dur: duration,
+            easing: 'easeInQuad'
+            });
+            confetti.setAttribute('animation__rot', {
+            property: 'rotation',
+            to: `360 360 360`,
+            dur: 1000,
+            loop: true
+            });
+        });
+        }
+        
+    });
+    </script>
+    
 </head>
 <body>
     <a-scene physics="debug: true" cursor="rayOrigin: mouse">
@@ -183,9 +247,8 @@
             </a-camera>
         </a-entity>
 
-        <!-- Ativa detecção de chegada -->
-        <a-entity check-finish></a-entity>
-
+        <!-- Ativa detecção de chegada com confetes -->
+        <a-entity win-condition="finish: #finish-line; message: #victory-message; confetti: #confetti-container"></a-entity>
 
         <!-- Arco de chegada -->
         <a-entity id="finish-arch" position="0 2 -20">
@@ -200,17 +263,6 @@
                    align="center" width="5" position="0 3.5 -4" color="black"></a-text>
         </a-entity>
 
-        <!-- Texto de vitória (invisível no início) -->
-        <a-text id="victory-message" 
-                value="Parabens! Voce venceu!" 
-                align="center" 
-                width="6" 
-                position="0 3.5 -26" 
-                color="black"
-                visible="false">
-        </a-text>
-
-
         <!-- Mão do jogador -->
         <a-entity id="hand" position="0.2 -0.3 -0.5"></a-entity>
 
@@ -218,6 +270,45 @@
         <a-camera id="camera">
             <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
         </a-camera>
+
+       <!-- Container de confetes -->
+        <a-entity id="confetti-container" visible="false" position="0 4 -22">
+        <!-- Gerar vários confetes coloridos -->
+        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ff0000" depth="0.05" height="0.05" width="0.05" position="0 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#00ff00" depth="0.05" height="0.05" width="0.05" position="1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#0000ff" depth="0.05" height="0.05" width="0.05" position="-1 0 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ffff00" depth="0.05" height="0.05" width="0.05" position="0.5 0.5 0" material="side:double"></a-plane>
+        <a-plane class="confetti" color="#ff00ff" depth="0.05" height="0.05" width="0.05" position="-0.5 0.5 0" material="side:double"></a-plane>
+        </a-entity>
+        <!-- Texto de vitória (HUD) com fundo -->
+        <a-entity id="victory-panel" position="0 3.5 -26" visible="false">
+        <!-- Fundo do painel -->
+        <a-plane width="4" height="1" color="#222" opacity="0.8" material="side: double" position="0 0 0"></a-plane>
+        
+        <!-- Borda decorativa -->
+        <a-plane width="4.1" height="1.1" color="#FFD700" opacity="0.9" position="0 0 -0.01"></a-plane>
+        
+        <!-- Texto -->
+        <a-text id="victory-message" 
+                value="PARABENS! VOCE VENCEU!"
+                align="center" 
+                width="5" 
+                color="#FFD700" 
+                position="0 0 0.01"
+                font="mozillavr">
+        </a-text>
+        </a-entity>
+  </a-entity>
     </a-scene>
 </body>
 </html>

@@ -83,6 +83,31 @@
             console.log('Começou a correr!'); // Debug
         }
     </script>
+
+
+
+    <script>
+        AFRAME.registerComponent('check-finish', {
+            tick: function () {
+                const player = document.querySelector('#player');
+                const finish = document.querySelector('#finish-line');
+                
+                const pPos = player.object3D.position;
+                const fPos = finish.object3D.position;
+                
+                // Distância até a linha de chegada
+                const dist = pPos.distanceTo(fPos);
+                
+                if (dist < 2 && !window.finished) {
+                    window.finished = true;
+                    
+                    const msg = document.querySelector('#victory-message');
+                    msg.setAttribute('visible', 'true');
+                }
+            }
+        });
+    </script>
+
 </head>
 <body>
     <a-scene physics="debug: true" cursor="rayOrigin: mouse">
@@ -96,31 +121,7 @@
         <a-entity environment="preset: forest"></a-entity>
         <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
 
-        <!-- Objetos interativos -->
-
-        <!-- Colher -->
-        <a-entity id="colher" 
-                 gltf-model="#colher-obj"
-                 position="0 1.4 -0.4"
-                 scale="3 3 3"
-                 grabbable
-                 dynamic-body="mass: 0.5">
-            <a-animation attribute="rotation"
-                        dur="2000"
-                        to="0 360 0"
-                        repeat="indefinite"></a-animation>
-        </a-entity>
-        
-        <!-- Ovo -->
-        <a-entity id="ovo" 
-                 gltf-model="#ovo-obj"
-                 position="1 1.6 -3"
-                 scale="5 5 5"
-                 grabbable
-                 dynamic-body="mass: 0.3"
-                 visible="false">
-        </a-entity>
-
+        <!-- Objetos interativos -->        
         <!-- Estrada -->
         <a-box id="road"
             position="0 0.01 -10"
@@ -151,6 +152,41 @@
             static-body>
         </a-box>
 
+        <!-- Contêiner que o jogador controla -->
+        <a-entity id="player" position="0 1.6 0" wasd-controls look-controls>
+            <!-- Mão do jogador -->
+            <a-entity id="hand" position="0.2 -0.3 -0.5">
+                <!-- Colher (inicialmente solta) -->
+                <a-entity id="colher" 
+                        gltf-model="#colher-obj"
+                        position="-0.2 0 0"
+                        scale="3 3 3"
+                        grabbable
+                        dynamic-body="mass: 0.5">
+                    <a-animation attribute="rotation"
+                                dur="2000"
+                                to="0 360 0"
+                                repeat="indefinite"></a-animation>
+                </a-entity>
+            </a-entity>
+            <!-- Ovo (fica na colher depois de pegar) -->
+            <a-entity id="ovo" 
+                    gltf-model="#ovo-obj"
+                    position="0 -0.15 -0.4"
+                    scale="4 4 4"
+                    grabbable
+                    dynamic-body="mass: 0.3"
+                    visible="true">
+            </a-entity>
+            <a-camera>
+                <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
+            </a-camera>
+        </a-entity>
+
+        <!-- Ativa detecção de chegada -->
+        <a-entity check-finish></a-entity>
+
+
         <!-- Arco de chegada -->
         <a-entity id="finish-arch" position="0 2 -20">
             <a-box position="0 2 0" width="4" height="0.1" depth="0.1" color="black"></a-box>
@@ -163,6 +199,17 @@
             <a-text id="instructions" value="Pegue a Colher Primeiro!" 
                    align="center" width="5" position="0 3.5 -4" color="black"></a-text>
         </a-entity>
+
+        <!-- Texto de vitória (invisível no início) -->
+        <a-text id="victory-message" 
+                value="Parabens! Voce venceu!" 
+                align="center" 
+                width="6" 
+                position="0 3.5 -26" 
+                color="black"
+                visible="false">
+        </a-text>
+
 
         <!-- Mão do jogador -->
         <a-entity id="hand" position="0.2 -0.3 -0.5"></a-entity>

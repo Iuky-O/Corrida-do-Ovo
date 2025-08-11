@@ -171,6 +171,13 @@
         
     });
     </script>
+
+    <script>
+        const musicPlayer = document.querySelector('#music-player');
+        window.addEventListener('click', () => {
+            musicPlayer.components.sound.playSound();
+        });
+    </script>
     
 </head>
 <body>
@@ -179,11 +186,17 @@
         <a-assets>
             <a-asset-item id="colher-obj" src="./Assets/objetos/colher.glb"></a-asset-item>
             <a-asset-item id="ovo-obj" src="./Assets/objetos/ovo.glb"></a-asset-item>
+            <audio id="winning" src="./Assets/sons/winning.mp3"></audio>
+            <audio id="baby-music" src="./Assets/sons/baby-music.mp3"></audio>
         </a-assets>
 
         <!-- Ambiente -->
         <a-entity environment="preset: forest"></a-entity>
         <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
+        
+        <!-- Sons -->
+        <a-entity sound="src: #winning; autoplay: true"></a-entity>
+        <a-entity sound="src: #baby-music; autoplay: true"></a-entity>
 
         <!-- Objetos interativos -->        
         <!-- Estrada -->

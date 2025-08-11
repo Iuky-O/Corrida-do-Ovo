@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Corrida do Ovo na Colher</title>
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    
+    <!-- Script de controle ANTES da cena -->
+    <script>
+        // Componente para objetos que podem ser pegos
+        AFRAME.registerComponent('grabbable', {
+            init: function() {
+                this.el.addEventListener('click', (evt) => {
+                    console.log('Clicou no objeto:', this.el.id); // Debug
+                    
+                    if (this.el.id === 'colher' && !window.hasSpoon) {
+                        window.hasSpoon = true;
+                        document.querySelector('#instructions').setAttribute('value', 'Agora pegue o ovo!');
+                        document.querySelector('#ovo').setAttribute('visible', 'true');
+                        
+                        // Remove física e animação
+                        this.el.removeAttribute('dynamic-body');
+                        this.el.removeAttribute('animation');
+                        
+                        // Anexa à mão do jogador
+                        this.el.setAttribute('position', '0 0 0');
+                        document.querySelector('#hand').appendChild(this.el);
+                        
+                        console.log('Colher pega!'); // Debug
+                    } 
+                    else if (this.el.id === 'ovo' && window.hasSpoon && !window.hasEgg) {
+                        window.hasEgg = true;
+                        document.querySelector('#instructions').setAttribute('value', 'Agora corra! Clique para começar.');
+                        
+                        // Remove física
+                        this.el.removeAttribute('dynamic-body');
+                        
+                        // Anexa à mão do jogador (sobre a colher)
+                        this.el.setAttribute('position', '0 0.05 0');
+                        document.querySelector('#hand').appendChild(this.el);
+                        
+                        console.log('Ovo pego!'); // Debug
+                    }
+                    else if (window.hasSpoon && window.hasEgg && !window.isRunning) {
+                        startRunning();
+                    }
+                });
+            }
+        });
+
+        // Variáveis de estado globais
+        window.hasSpoon = false;
+        window.hasEgg = false;
+        window.isRunning = false;
+
+        // Função para começar a correr
+        function startRunning() {
+            window.isRunning = true;
+            document.querySelector('#instructions').setAttribute('value', 'Correndo...');
+            
+            // Move a colher com o ovo para a "boca"
+            const spoon = document.querySelector('#colher');
+            const egg = document.querySelector('#ovo');
+            
+            document.querySelector('#mouth').appendChild(spoon);
+            document.querySelector('#mouth').appendChild(egg);
+            
+            // Ajusta posições
+            spoon.setAttribute('position', '0 0 -0.3');
+            spoon.setAttribute('rotation', '0 0 10');
+            egg.setAttribute('position', '0 0.1 -0.2');
+            
+            // Adiciona animação de corrida
+            document.querySelector('#camera').setAttribute('animation', {
+                property: 'position',
+                to: '0 1.6 -20',
+                dur: 10000,
+                easing: 'linear'
+            });
+            
+            console.log('Começou a correr!'); // Debug
+        }
+    </script>
+</head>
+<body>
+    <a-scene physics="debug: true" cursor="rayOrigin: mouse">
+        <!-- Assets -->
+        <a-assets>
+            <a-asset-item id="colher-obj" src="./Assets/objetos/colher.glb"></a-asset-item>
+            <a-asset-item id="ovo-obj" src="./Assets/objetos/ovo.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Ambiente -->
+        <a-entity environment="preset: forest"></a-entity>
+        <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
+
+        <!-- Objetos interativos -->
+        <a-entity id="colher" 
+                 gltf-model="#colher-obj"
+                 position="-1 1.6 -3"
+                 scale="3 3 3"
+                 grabbable
+                 dynamic-body="mass: 0.5">
+            <a-animation attribute="rotation"
+                        dur="2000"
+                        to="0 360 0"
+                        repeat="indefinite"></a-animation>
+        </a-entity>
+
+        <a-entity id="ovo" 
+                 gltf-model="#ovo-obj"
+                 position="1 1.6 -3"
+                 scale="5 5 5"
+                 grabbable
+                 dynamic-body="mass: 0.3"
+                 visible="false">
+        </a-entity>
+
+        <!-- Interface -->
+        <a-entity id="ui" position="0 0 -0.5">
+            <a-text id="instructions" value="Pegue a colher primeiro!" 
+                   align="center" width="5" position="0 0.3 0" color="white"></a-text>
+        </a-entity>
+
+        <!-- Mão do jogador -->
+        <a-entity id="hand" position="0.2 -0.3 -0.5"></a-entity>
+
+        <!-- Câmera -->
+        <a-camera id="camera">
+            <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
+        </a-camera>
+    </a-scene>
+</body>
+</html>

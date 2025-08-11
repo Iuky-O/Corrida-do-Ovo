@@ -224,14 +224,6 @@
         
     });
     </script>
-
-    <script>
-        const musicPlayer = document.querySelector('#music-player');
-        window.addEventListener('click', () => {
-            musicPlayer.components.sound.playSound();
-        });
-    </script>
-
     
 </head>
 <body>
@@ -246,23 +238,20 @@
         <a-assets>
             <a-asset-item id="colher-obj" src="./Assets/objetos/colher.glb"></a-asset-item>
             <a-asset-item id="ovo-obj" src="./Assets/objetos/ovo.glb"></a-asset-item>
-            <audio id="winning" src="./Assets/sons/winning.mp3"></audio>
-            <audio id="baby-music" src="./Assets/sons/baby-music.mp3"></audio>
             <a-asset-item id="pessoa-1" src="Assets/personagens/raiva.glb"></a-asset-item>
             <a-asset-item id="pessoa-2" src="Assets/personagens/pessoa-dancando.glb"></a-asset-item>
             <a-asset-item id="pessoa-3" src="Assets/personagens/hip-hop.glb"></a-asset-item>
             <a-asset-item id="pessoa-4" src="Assets/personagens/feliz.glb"></a-asset-item>
             <a-asset-item id="colher-textura" src="Assets//textura/colher-textura.png"></a-asset-item>
             <a-asset-item id="ovo-textura" src="Assets/textura/ovo-amarelo.png"></a-asset-item>
+
+            <audio id="bg-music" src="./Assets/music/baby-music.mp3" preload="auto"></audio>
+            <audio id="victory-music" src="./Assets/music/winning.mp3" preload="auto"></audio>
         </a-assets>
 
         <!-- Ambiente -->
         <a-entity environment="preset: forest"></a-entity>
         <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
-        
-        <!-- Sons -->
-        <a-entity sound="src: #winning; autoplay: true"></a-entity>
-        <a-entity sound="src: #baby-music; autoplay: true"></a-entity>
 
         <!-- Objetos interativos -->        
         <!-- Estrada -->
@@ -435,6 +424,10 @@
         <!-- outros -->
         <a-box position="1 0.5 -25" width="2" height="0.3" depth="0.3" color="#16A085" rotation="0 20 0"></a-box>
         <a-cylinder position="-4 0.5 -22" radius="0.2" height="2" color="#D35400" rotation="30 0 0"></a-cylinder>
+
+
+        <!-- Musica -->
+        <a-entity sound="src: #bg-music; autoplay: true; loop: true; volume: 1"></a-entity>
 
     </a-scene>
 </body>

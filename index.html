@@ -70,11 +70,10 @@
                     this.el.setAttribute('visible', 'false');
                     window.gameStarted = true;
 
-                    // resetar o timer visual
                     const timerText = document.querySelector('#timer');
                     timerText.setAttribute('value', '0.00s');
 
-                    // iniciar o cronômetro aqui
+                    // iniciar o cronômetro
                     startTimer();
                 });
             }

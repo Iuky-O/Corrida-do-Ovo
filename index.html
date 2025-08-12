@@ -142,6 +142,12 @@
         AFRAME.registerComponent('check-finish', {
         init: function () {
             this.hasPlayedVictory = false;
+
+            // Escuta evento customizado para resetar estado
+            window.addEventListener('restart-run', () => {
+                this.hasPlayedVictory = false;
+                console.log('check-finish resetado');
+            });
         },
         tick: function () {
             if (this.hasPlayedVictory) return;
@@ -153,59 +159,60 @@
             const dist = player.object3D.position.distanceTo(finish.object3D.position);
 
             if (dist < 2 && !window.finished) {
-            window.finished = true;
-            this.hasPlayedVictory = true; // evita múltiplos gatilhos
+                window.finished = true;
+                this.hasPlayedVictory = true;
 
-            // HUD / cronômetro
-            stopTimer();
-            const msg = document.querySelector('#victory-message');
-            if (msg) msg.setAttribute('visible', 'true');
+                stopTimer();
+                onGameFinish();
 
-            // parar música de fundo (se existir)
-            const bg = document.querySelector('#bg-music-entity');
-            if (bg && bg.components && bg.components.sound) {
-                try { bg.components.sound.stopSound(); console.log('bg music stopped'); }
-                catch (e) { console.warn('erro ao parar bg music', e); }
+                const msg = document.querySelector('#victory-message');
+                if (msg) msg.setAttribute('visible', 'true');
+
+                // parar música de fundo (se existir)
+                const bg = document.querySelector('#bg-music-entity');
+                if (bg && bg.components && bg.components.sound) {
+                    try { bg.components.sound.stopSound(); console.log('bg music stopped'); }
+                    catch (e) { console.warn('erro ao parar bg music', e); }
+                }
+
+                // Função que tenta tocar a música de vitória via components.sound
+                const tryPlayVictory = () => {
+                    const victory = document.querySelector('#music-victory');
+                    if (victory && victory.components && victory.components.sound) {
+                    try {
+                        victory.components.sound.playSound();
+                        console.log('Victory: playSound() chamado em #music-victory');
+                        return true;
+                    } catch (e) {
+                        console.warn('erro playSound():', e);
+                    }
+                    }
+                    return false;
+                };
+
+                // Se o componente ainda não estiver pronto, tenta por alguns ciclos e depois fallback
+                let attempts = 0;
+                const maxAttempts = 20;
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (tryPlayVictory()) {
+                    clearInterval(interval);
+                    return;
+                    }
+                    if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    // fallback: tocar diretamente no <audio id="victory-music"> (asset)
+                    const audioAsset = document.querySelector('#victory-music'); // <audio> em <a-assets>
+                    if (audioAsset) {
+                        audioAsset.play().then(() => console.log('Victory: audioAsset.play() ok'))
+                        .catch(err => console.warn('Erro ao tocar victory-music via audio.play():', err));
+                    } else {
+                        console.warn('Nenhum elemento de som encontrado para vitória (nem #music-victory nem #victory-music).');
+                    }
+                    }
+                }, 100); // tenta a cada 100ms
+                }
             }
-
-            // Função que tenta tocar a música de vitória via components.sound
-            const tryPlayVictory = () => {
-                const victory = document.querySelector('#music-victory');
-                if (victory && victory.components && victory.components.sound) {
-                try {
-                    victory.components.sound.playSound();
-                    console.log('Victory: playSound() chamado em #music-victory');
-                    return true;
-                } catch (e) {
-                    console.warn('erro playSound():', e);
-                }
-                }
-                return false;
-            };
-
-            // Se o componente ainda não estiver pronto, tenta por alguns ciclos e depois fallback
-            let attempts = 0;
-            const maxAttempts = 20;
-            const interval = setInterval(() => {
-                attempts++;
-                if (tryPlayVictory()) {
-                clearInterval(interval);
-                return;
-                }
-                if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                // fallback: tocar diretamente no <audio id="victory-music"> (asset)
-                const audioAsset = document.querySelector('#victory-music'); // <audio> em <a-assets>
-                if (audioAsset) {
-                    audioAsset.play().then(() => console.log('Victory: audioAsset.play() ok'))
-                    .catch(err => console.warn('Erro ao tocar victory-music via audio.play():', err));
-                } else {
-                    console.warn('Nenhum elemento de som encontrado para vitória (nem #music-victory nem #victory-music).');
-                }
-                }
-            }, 100); // tenta a cada 100ms
-            }
-        }
         });
     </script>
 
@@ -272,7 +279,73 @@
             
         });
     </script>
-    
+
+    <script>
+        let scores = []; // vai guardar tempos em segundos
+
+        function addScore(time) {
+            scores.push(time);
+            // Ordena menor tempo primeiro
+            scores.sort((a, b) => a - b);
+            // Limita a 3 melhores
+            scores = scores.slice(0, 3);
+            updateRanking();
+        }
+
+        function updateRanking() {
+            const rankingEl = document.querySelector('#ranking');
+            let text = 'Ranking:\n';
+            scores.forEach((s, i) => {
+                text += `${i + 1}. ${s.toFixed(2)}s\n`;
+            });
+            // completa com traços se menos de 3
+            for (let i = scores.length; i < 3; i++) {
+                text += `${i + 1}. ---\n`;
+            }
+            rankingEl.setAttribute('value', text.trim());
+        }
+
+        // Integra com final do jogo
+        function onGameFinish() {
+            const timerText = document.querySelector('#timer').getAttribute('value');
+            const time = parseFloat(timerText.replace('s', ''));
+            if (!isNaN(time)) {
+                addScore(time);
+            }
+        }
+    </script>
+
+    <script>
+        AFRAME.registerComponent('restart-timer-button', {
+            init: function () {
+                this.el.addEventListener('click', () => {
+                    if (window.finished) {
+                        window.finished = false;
+                    }
+
+                    // Dispara evento para resetar o componente check-finish
+                    window.dispatchEvent(new Event('restart-run'));
+
+                    // Reseta timer
+                    startTime = Date.now();
+                    if (!isRunning) {
+                        isRunning = true;
+                        timerInterval = setInterval(updateTimer, 100);
+                    }
+                    document.querySelector('#instructions').setAttribute('value', 'Correndo...');
+
+                    // Esconde mensagem e confetes
+                    const msg = document.querySelector('#victory-message');
+                    if (msg) msg.setAttribute('visible', 'false');
+                    const confettiContainer = document.querySelector('#confetti-container');
+                    if(confettiContainer) confettiContainer.setAttribute('visible', 'false');
+
+                    console.log('Cronômetro reiniciado e estado resetado!');
+                });
+            }
+        });
+    </script>
+
 </head>
 <body>
     <a-scene physics="debug: true" cursor="rayOrigin: mouse">
@@ -362,6 +435,15 @@
             <a-camera>
                 <a-entity id="mouth" position="0 -0.2 -0.5"></a-entity>
             </a-camera>
+
+            <a-text id="ranking" 
+                    value="Ranking:\n1. ---\n2. ---\n3. ---" 
+                    position="-1.5 0.8 -1" 
+                    align="left" 
+                    color="black" 
+                    width="2"
+                    baseline="top">
+            </a-text>
 
             <a-text id="timer" value="0.00s" position="1.5 0.7 -1" align="right" color="black" width="3"></a-text>
         </a-entity>
@@ -478,6 +560,27 @@
         <a-entity sound="src: #bg-music; autoplay: true; loop: true; volume: 1"></a-entity>
         
         <a-entity id="bg-music-entity" sound="src: #bg-music; autoplay: true; loop: true; volume: 3"></a-entity>
+
+        <a-box 
+            id="start-line" 
+            position="2.6 0.5 -3" 
+            width="1" 
+            height="1" 
+            depth="0.1" 
+            color="#b489ff" 
+            opacity="0.5" 
+            class="clickable"
+            restart-timer-button>
+        </a-box>
+
+        <a-text 
+            value="Reiniciar partida no bloco lilaz:" 
+            position="2.6 1.2 -3" 
+            align="center" 
+            color="#000000" 
+            width="2">
+        </a-text>
+
 
 
     </a-scene>

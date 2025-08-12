@@ -75,6 +75,12 @@
 
                     // iniciar o cronômetro
                     startTimer();
+
+                    // Toca a música de fundo
+                    const bgMusic = document.querySelector('#bg-music-entity');
+                    if (bgMusic) {
+                        bgMusic.components.sound.playSound();
+                    }
                 });
             }
         });
@@ -167,51 +173,18 @@
                 const msg = document.querySelector('#victory-message');
                 if (msg) msg.setAttribute('visible', 'true');
 
-                // parar música de fundo (se existir)
+                // parar música de fundo
                 const bg = document.querySelector('#bg-music-entity');
                 if (bg && bg.components && bg.components.sound) {
-                    try { bg.components.sound.stopSound(); console.log('bg music stopped'); }
-                    catch (e) { console.warn('erro ao parar bg music', e); }
+                    bg.components.sound.stopSound();
                 }
-
-                // Função que tenta tocar a música de vitória via components.sound
-                const tryPlayVictory = () => {
-                    const victory = document.querySelector('#music-victory');
-                    if (victory && victory.components && victory.components.sound) {
-                    try {
-                        victory.components.sound.playSound();
-                        console.log('Victory: playSound() chamado em #music-victory');
-                        return true;
-                    } catch (e) {
-                        console.warn('erro playSound():', e);
-                    }
-                    }
-                    return false;
-                };
-
-                // Se o componente ainda não estiver pronto, tenta por alguns ciclos e depois fallback
-                let attempts = 0;
-                const maxAttempts = 20;
-                const interval = setInterval(() => {
-                    attempts++;
-                    if (tryPlayVictory()) {
-                    clearInterval(interval);
-                    return;
-                    }
-                    if (attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    // fallback: tocar diretamente no <audio id="victory-music"> (asset)
-                    const audioAsset = document.querySelector('#victory-music'); // <audio> em <a-assets>
-                    if (audioAsset) {
-                        audioAsset.play().then(() => console.log('Victory: audioAsset.play() ok'))
-                        .catch(err => console.warn('Erro ao tocar victory-music via audio.play():', err));
-                    } else {
-                        console.warn('Nenhum elemento de som encontrado para vitória (nem #music-victory nem #victory-music).');
-                    }
-                    }
-                }, 100); // tenta a cada 100ms
+                // tocar música de vitória
+                const victory = document.querySelector('#victory-music-entity');
+                if (victory && victory.components && victory.components.sound) {
+                    victory.components.sound.playSound();
                 }
             }
+        }
         });
     </script>
 
@@ -499,6 +472,13 @@
                     position="0 0 0.01"
                     font="mozillavr">
             </a-text>
+            <a-text 
+            value="Para reiniciar o tempo volte ao inicio e clique no bloco lilas:" 
+            position="0 1 0.01"
+            align="center" 
+            color="#000000" 
+            width="5">
+        </a-text>
         </a-entity>
 
         <!-- PESSOAS -->
@@ -556,16 +536,16 @@
 
 
         <!-- Musica -->
-        <a-entity sound="src: #bg-music; autoplay: true; loop: true; volume: 1"></a-entity>
+         <a-entity id="bg-music-entity" sound="src: #bg-music; autoplay: false; loop: false; volume: 1"></a-entity>
+         <a-entity id="victory-music-entity" sound="src: #victory-music; autoplay: false; loop: false; volume: 1"></a-entity>
         
-        <a-entity id="bg-music-entity" sound="src: #bg-music; autoplay: true; loop: true; volume: 3"></a-entity>
-
         <a-box 
             id="start-line" 
-            position="2.6 0.5 -3" 
+            position="2.6 0.5 -0.9"
+            rotation="0 -90 0" 
             width="1" 
             height="1" 
-            depth="0.1" 
+            depth="0.6" 
             color="#b489ff" 
             opacity="0.5" 
             class="clickable"
@@ -574,13 +554,12 @@
 
         <a-text 
             value="Reiniciar partida no bloco lilas:" 
-            position="2.6 1.2 -3" 
+            position="2.6 1.2 -0.9"
+            rotation="0 -90 0"  
             align="center" 
             color="#000000" 
             width="2">
         </a-text>
-
-
 
     </a-scene>
 </body>

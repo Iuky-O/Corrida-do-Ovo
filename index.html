@@ -140,98 +140,138 @@
 
     <script>
         AFRAME.registerComponent('check-finish', {
-            tick: function () {
-                const player = document.querySelector('#player');
-                const finish = document.querySelector('#finish-line');
-                
-                const pPos = player.object3D.position;
-                const fPos = finish.object3D.position;
-                
-                // distância até a linha de chegada
-                const dist = pPos.distanceTo(fPos);
-                
-                if (dist < 2 && !window.finished) {
-                    window.finished = true;
-                    
-                    const msg = document.querySelector('#victory-message');
-                    stopTimer()
-                    msg.setAttribute('visible', 'true');
-                }
+        init: function () {
+            this.hasPlayedVictory = false;
+        },
+        tick: function () {
+            if (this.hasPlayedVictory) return;
+
+            const player = document.querySelector('#player');
+            const finish = document.querySelector('#finish-line');
+            if (!player || !finish) return;
+
+            const dist = player.object3D.position.distanceTo(finish.object3D.position);
+
+            if (dist < 2 && !window.finished) {
+            window.finished = true;
+            this.hasPlayedVictory = true; // evita múltiplos gatilhos
+
+            // HUD / cronômetro
+            stopTimer();
+            const msg = document.querySelector('#victory-message');
+            if (msg) msg.setAttribute('visible', 'true');
+
+            // parar música de fundo (se existir)
+            const bg = document.querySelector('#bg-music-entity');
+            if (bg && bg.components && bg.components.sound) {
+                try { bg.components.sound.stopSound(); console.log('bg music stopped'); }
+                catch (e) { console.warn('erro ao parar bg music', e); }
             }
-        });
-    </script>
 
-<script>
-    AFRAME.registerComponent('win-condition', {
-      schema: {
-        finish: { type: 'selector' },
-        message: { type: 'selector' },
-        confetti: { type: 'selector' }
-      },
-    
-      tick: function () {
-        if (this.hasWon) return;
-    
-        const player = document.querySelector('#player');
-        const finish = this.data.finish;
-    
-        if (!player || !finish) return;
-    
-        const pPos = player.object3D.position;
-        const fPos = finish.object3D.position;
-    
-        const dist = pPos.distanceTo(fPos);
-    
-        if (dist < 2) {
-          this.hasWon = true;
-    
-          if (this.data.message) {
-            document.querySelector('#victory-panel').setAttribute('visible', true);
-          }
-    
-          if (this.data.confetti) {
-            this.data.confetti.setAttribute('visible', true);
-            this.startConfettiAnimation(this.data.confetti);
-          }
+            // Função que tenta tocar a música de vitória via components.sound
+            const tryPlayVictory = () => {
+                const victory = document.querySelector('#music-victory');
+                if (victory && victory.components && victory.components.sound) {
+                try {
+                    victory.components.sound.playSound();
+                    console.log('Victory: playSound() chamado em #music-victory');
+                    return true;
+                } catch (e) {
+                    console.warn('erro playSound():', e);
+                }
+                }
+                return false;
+            };
+
+            // Se o componente ainda não estiver pronto, tenta por alguns ciclos e depois fallback
+            let attempts = 0;
+            const maxAttempts = 20;
+            const interval = setInterval(() => {
+                attempts++;
+                if (tryPlayVictory()) {
+                clearInterval(interval);
+                return;
+                }
+                if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                // fallback: tocar diretamente no <audio id="victory-music"> (asset)
+                const audioAsset = document.querySelector('#victory-music'); // <audio> em <a-assets>
+                if (audioAsset) {
+                    audioAsset.play().then(() => console.log('Victory: audioAsset.play() ok'))
+                    .catch(err => console.warn('Erro ao tocar victory-music via audio.play():', err));
+                } else {
+                    console.warn('Nenhum elemento de som encontrado para vitória (nem #music-victory nem #victory-music).');
+                }
+                }
+            }, 100); // tenta a cada 100ms
+            }
         }
-      },
-    
-      startConfettiAnimation: function (container) {
-        const confettis = container.querySelectorAll('.confetti');
-
-        confettis.forEach(confetti => {
-            const randomX = (Math.random() - 0.5) * 4;
-            const randomZ = (Math.random() - 0.5) * 4;
-            const startY = 0;
-            const endY = -3; // cair para baixo
-            const duration = Math.random() * 1000 + 2000;
-
-            confetti.setAttribute('animation__pos', {
-            property: 'position',
-            from: `${randomX} ${startY} ${randomZ}`,
-            to: `${randomX} ${endY} ${randomZ}`,
-            dur: duration,
-            easing: 'easeInQuad'
-            });
-            confetti.setAttribute('animation__rot', {
-            property: 'rotation',
-            to: `360 360 360`,
-            dur: 1000,
-            loop: true
-            });
         });
-        }
-        
-    });
     </script>
 
     <script>
-        const musicPlayer = document.querySelector('#music-player');
-        window.addEventListener('click', () => {
-            musicPlayer.components.sound.playSound();
+        AFRAME.registerComponent('win-condition', {
+        schema: {
+            finish: { type: 'selector' },
+            message: { type: 'selector' },
+            confetti: { type: 'selector' }
+        },
+        
+        tick: function () {
+            if (this.hasWon) return;
+        
+            const player = document.querySelector('#player');
+            const finish = this.data.finish;
+        
+            if (!player || !finish) return;
+        
+            const pPos = player.object3D.position;
+            const fPos = finish.object3D.position;
+        
+            const dist = pPos.distanceTo(fPos);
+        
+            if (dist < 2) {
+            this.hasWon = true;
+        
+            if (this.data.message) {
+                document.querySelector('#victory-panel').setAttribute('visible', true);
+            }
+        
+            if (this.data.confetti) {
+                this.data.confetti.setAttribute('visible', true);
+                this.startConfettiAnimation(this.data.confetti);
+            }
+            }
+        },
+        
+        startConfettiAnimation: function (container) {
+            const confettis = container.querySelectorAll('.confetti');
+
+            confettis.forEach(confetti => {
+                const randomX = (Math.random() - 0.5) * 4;
+                const randomZ = (Math.random() - 0.5) * 4;
+                const startY = 0;
+                const endY = -3; // cair para baixo
+                const duration = Math.random() * 1000 + 2000;
+
+                confetti.setAttribute('animation__pos', {
+                property: 'position',
+                from: `${randomX} ${startY} ${randomZ}`,
+                to: `${randomX} ${endY} ${randomZ}`,
+                dur: duration,
+                easing: 'easeInQuad'
+                });
+                confetti.setAttribute('animation__rot', {
+                property: 'rotation',
+                to: `360 360 360`,
+                dur: 1000,
+                loop: true
+                });
+            });
+            }
+            
         });
     </script>
-
     
 </head>
 <body>
@@ -246,23 +286,20 @@
         <a-assets>
             <a-asset-item id="colher-obj" src="./Assets/objetos/colher.glb"></a-asset-item>
             <a-asset-item id="ovo-obj" src="./Assets/objetos/ovo.glb"></a-asset-item>
-            <audio id="winning" src="./Assets/sons/winning.mp3"></audio>
-            <audio id="baby-music" src="./Assets/sons/baby-music.mp3"></audio>
             <a-asset-item id="pessoa-1" src="Assets/personagens/raiva.glb"></a-asset-item>
             <a-asset-item id="pessoa-2" src="Assets/personagens/pessoa-dancando.glb"></a-asset-item>
             <a-asset-item id="pessoa-3" src="Assets/personagens/hip-hop.glb"></a-asset-item>
             <a-asset-item id="pessoa-4" src="Assets/personagens/feliz.glb"></a-asset-item>
             <a-asset-item id="colher-textura" src="Assets//textura/colher-textura.png"></a-asset-item>
             <a-asset-item id="ovo-textura" src="Assets/textura/ovo-amarelo.png"></a-asset-item>
+
+            <audio id="bg-music" src="./Assets/music/baby-music.mp3" preload="auto"></audio>
+            <audio id="victory-music" src="./Assets/music/winning.mp3" preload="auto"></audio>
         </a-assets>
 
         <!-- Ambiente -->
         <a-entity environment="preset: forest"></a-entity>
         <a-plane position="0 0 -4" rotation="-90 0 0" width="100" height="100" color="#7BC8A4" static-body></a-plane>
-        
-        <!-- Sons -->
-        <a-entity sound="src: #winning; autoplay: true"></a-entity>
-        <a-entity sound="src: #baby-music; autoplay: true"></a-entity>
 
         <!-- Objetos interativos -->        
         <!-- Estrada -->
@@ -435,6 +472,13 @@
         <!-- outros -->
         <a-box position="1 0.5 -25" width="2" height="0.3" depth="0.3" color="#16A085" rotation="0 20 0"></a-box>
         <a-cylinder position="-4 0.5 -22" radius="0.2" height="2" color="#D35400" rotation="30 0 0"></a-cylinder>
+
+
+        <!-- Musica -->
+        <a-entity sound="src: #bg-music; autoplay: true; loop: true; volume: 1"></a-entity>
+        
+        <a-entity id="bg-music-entity" sound="src: #bg-music; autoplay: true; loop: true; volume: 3"></a-entity>
+
 
     </a-scene>
 </body>

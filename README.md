@@ -6,9 +6,13 @@
 Prepare-se para testar sua coordenação motora, agilidade e concentração!</b>
 </h2>
 
-📜 Sobre o projeto
+### 📜 Sobre o projeto
 A Corrida do Ovo é um jogo em realidade virtual/web desenvolvido com A-Frame, que simula a clássica brincadeira de equilíbrio.
 O jogador controla o movimento, tentando chegar ao final sem derrubar o ovo.
+
+Grupo: Iumy Pimentel, Gabriella Staudt, Paulo Ávila e Antônio Gabriel
+
+Projeto desenvolvido na Universidade do Estado do Pará.
 
 ### 🚀 Tecnologias utilizadas
 - HTML5
@@ -45,9 +49,14 @@ Abra o arquivo index.html em seu navegador.
 
 Divirta-se! 🎉
 
----
-<h2 align="center">
-  <b>Direitos reservados a equipe:</b>
-  <b>Antônio Gabriel, Eduardo Patrick, Iumy Pimentel e Letícia Juliana</b>
-</h2>
+___
+<p align="center">
+  <b>Feito com ❤️ por</b> <a href="https://github.com/Iuky-O"><b>Iuky-O</b>
+</p>
+<p align="center">
+  </b><a href="https://github.com/EduardoTrikk"><b>EduardoTrikk</b>
+</p>
+<p align="center">
+  </b><a href="https://github.com/leh826"><b>Leh826</b></a>
+</p>
 
